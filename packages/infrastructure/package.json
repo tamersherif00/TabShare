@@ -1,0 +1,21 @@
+{
+  "name": "@tabshare/infrastructure",
+  "version": "1.0.0",
+  "description": "CDK infrastructure for TabShare",
+  "main": "bin/app.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.100.0",
+    "constructs": "^10.0.0",
+    "source-map-support": "^0.5.21"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.25",
+    "aws-cdk": "^2.100.0",
+    "typescript": "^5.0.0"
+  }
+}

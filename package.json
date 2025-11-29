@@ -1,0 +1,25 @@
+{
+  "name": "tabshare",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "echo '⚠️  Run these commands in separate terminals:' && echo '  Terminal 1: npm run backend' && echo '  Terminal 2: npm run frontend'",
+    "frontend": "npm run dev --workspace=frontend",
+    "backend": "npm run local --workspace=backend",
+    "build:frontend": "cd packages/frontend && npm run build",
+    "build:backend": "cd packages/backend && npm run build"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.45.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.2.0"
+  }
+}
