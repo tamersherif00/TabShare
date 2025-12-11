@@ -14,7 +14,7 @@
     "source-map-support": "^0.5.21"
   },
   "devDependencies": {
-    "@types/node": "^20.19.25",
+    "@types/node": "^20.19.26",
     "aws-cdk": "^2.100.0",
     "typescript": "^5.0.0"
   }
