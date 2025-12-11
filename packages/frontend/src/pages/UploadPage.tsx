@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BillUpload from '../components/BillUpload';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 
 export default function UploadPage() {
   const navigate = useNavigate();
@@ -8,9 +11,9 @@ export default function UploadPage() {
   const [payerName, setPayerName] = useState('');
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [nameError, setNameError] = useState('');
 
   const handleUpload = async (file: File) => {
-    // Show name modal before uploading
     setPendingFile(file);
     setShowNameModal(true);
   };
@@ -19,11 +22,11 @@ export default function UploadPage() {
     if (!payerName.trim() || !pendingFile) return;
     
     setIsUploading(true);
+    setNameError('');
     
     try {
       const payerId = 'payer-' + Date.now();
       
-      // Step 1: Create bill and get presigned S3 URL
       const createResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/bills/upload`, {
         method: 'POST',
         headers: {
@@ -43,7 +46,6 @@ export default function UploadPage() {
 
       const { bill, uploadUrl, receiptKey } = await createResponse.json();
 
-      // Step 2: Upload file directly to S3
       const uploadResponse = await fetch(uploadUrl, {
         method: 'PUT',
         headers: {
@@ -57,7 +59,6 @@ export default function UploadPage() {
         throw new Error(`Failed to upload file to S3: ${uploadResponse.status} - ${errorText}`);
       }
 
-      // Step 3: Wait a moment for S3 consistency, then process receipt with Textract
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const processResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/bills/process`, {
@@ -74,78 +75,101 @@ export default function UploadPage() {
       if (processResponse.ok) {
         const processResult = await processResponse.json();
         
-        // Check if Textract failed
         if (processResult.textractFailed) {
-          alert('Could not automatically extract items from receipt. You can add them manually.');
+          // We'll show a toast notification instead of alert
+          console.warn('Textract failed - manual entry will be needed');
         }
       }
       
-      // Store payer info in localStorage
       localStorage.setItem(`bill_${bill.id}_payer`, JSON.stringify({
         payerId,
         name: payerName.trim()
       }));
       
-      // Navigate to payer dashboard
       navigate(`/bill/${bill.id}/dashboard?name=${encodeURIComponent(payerName.trim())}`);
     } catch (error) {
       console.error('Upload failed:', error);
-      alert('Upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      setNameError(error instanceof Error ? error.message : 'Upload failed. Please try again.');
       setIsUploading(false);
-      setShowNameModal(false);
-      setPendingFile(null);
-      setPayerName('');
     }
   };
 
+  const handleCancel = () => {
+    setShowNameModal(false);
+    setPendingFile(null);
+    setPayerName('');
+    setNameError('');
+  };
+
   return (
-    <>
-      {/* Name Entry Modal */}
-      {showNameModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Enter Your Name
-            </h2>
-            <p className="text-gray-600 mb-6">
-              As the payer, enter your name to create the bill
-            </p>
-            
-            <input
-              type="text"
-              value={payerName}
-              onChange={(e) => setPayerName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleConfirmUpload()}
-              placeholder="Your name"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
-              autoFocus
-            />
-            
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setShowNameModal(false);
-                  setPendingFile(null);
-                }}
-                className="flex-1 px-6 py-3 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmUpload}
-                disabled={!payerName.trim() || isUploading}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isUploading ? 'Creating...' : 'Create Bill'}
-              </button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Bill</h1>
+          <p className="text-gray-600">Upload your receipt to get started</p>
         </div>
-      )}
-      
-      <div className="max-w-2xl mx-auto">
+
         <BillUpload onUpload={handleUpload} />
+
+        {/* Name Entry Modal */}
+        {showNameModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <Card className="max-w-md w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <div className="inline-flex items-center justify-center w-10 h-10 bg-primary-100 rounded-xl">
+                    <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  Enter Your Name
+                </CardTitle>
+              </CardHeader>
+              
+              <CardContent className="space-y-6">
+                <p className="text-gray-600">
+                  As the payer, enter your name to create the bill and manage the split.
+                </p>
+                
+                <Input
+                  value={payerName}
+                  onChange={(e) => {
+                    setPayerName(e.target.value);
+                    setNameError('');
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && !isUploading && payerName.trim() && handleConfirmUpload()}
+                  placeholder="Your name"
+                  error={!!nameError}
+                  helperText={nameError}
+                  autoFocus
+                />
+                
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleCancel}
+                    variant="secondary"
+                    size="lg"
+                    className="flex-1"
+                    disabled={isUploading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleConfirmUpload}
+                    disabled={!payerName.trim() || isUploading}
+                    loading={isUploading}
+                    size="lg"
+                    className="flex-1"
+                  >
+                    {isUploading ? 'Creating Bill...' : 'Create Bill'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 }

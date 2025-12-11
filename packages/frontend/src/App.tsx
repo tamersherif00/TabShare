@@ -13,7 +13,10 @@ const PayerDashboardPage = lazy(() => import('./pages/PayerDashboardPage'));
 // Loading fallback component
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    <div className="flex flex-col items-center space-y-4">
+      <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-primary-500"></div>
+      <p className="text-gray-600 font-medium">Loading...</p>
+    </div>
   </div>
 );
 

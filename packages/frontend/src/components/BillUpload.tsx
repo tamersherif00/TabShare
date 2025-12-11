@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
 import CameraCapture from './CameraCapture';
 import { compressImage } from '../utils/image-compression';
+import { Button } from './ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 
 interface BillUploadProps {
   onUpload: (file: File) => Promise<void>;
@@ -19,12 +21,10 @@ export default function BillUpload({ onUpload }: BillUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (file: File): string | null => {
-    // Check file size
     if (file.size > MAX_FILE_SIZE) {
       return 'File size must be less than 5MB. Please compress or resize your image.';
     }
 
-    // Check file format
     if (!ALLOWED_FORMATS.includes(file.type)) {
       return 'Please upload a JPEG, PNG, or HEIC image';
     }
@@ -45,13 +45,11 @@ export default function BillUpload({ onUpload }: BillUploadProps) {
     setError(null);
     setSelectedFile(file);
     
-    // Create preview URL
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
   };
 
   const handleCameraCapture = async (imageBlob: Blob) => {
-    // Convert blob to file
     const file = new File([imageBlob], 'receipt.jpg', { type: 'image/jpeg' });
     
     const validationError = validateFile(file);
@@ -64,7 +62,6 @@ export default function BillUpload({ onUpload }: BillUploadProps) {
     setError(null);
     setSelectedFile(file);
     
-    // Create preview URL
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     setShowCamera(false);
@@ -78,24 +75,21 @@ export default function BillUpload({ onUpload }: BillUploadProps) {
       setUploadProgress(0);
       setError(null);
 
-      // Compress image before upload
       setUploadProgress(10);
       
       const compressedBlob = await compressImage(selectedFile, {
         maxWidth: 1920,
         maxHeight: 1920,
         quality: 0.85,
-        maxSizeMB: 4.5, // Keep under 5MB with buffer for sync Textract
+        maxSizeMB: 4.5,
       });
       
-      // Convert blob to file
       const compressedFile = new File([compressedBlob], selectedFile.name, { 
         type: compressedBlob.type || selectedFile.type 
       });
 
       setUploadProgress(30);
 
-      // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress((prev: number) => {
           if (prev >= 90) {
@@ -110,9 +104,6 @@ export default function BillUpload({ onUpload }: BillUploadProps) {
       
       clearInterval(progressInterval);
       setUploadProgress(100);
-      
-      // Don't reset here - let parent component handle navigation
-      // The UploadPage will show a modal and then navigate
       setIsUploading(false);
     } catch (err) {
       console.error('❌ Upload error:', err);
@@ -132,7 +123,6 @@ export default function BillUpload({ onUpload }: BillUploadProps) {
     }
   };
 
-  // Check if device supports camera
   const isCameraSupported = 'mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices;
 
   if (showCamera) {
@@ -145,106 +135,165 @@ export default function BillUpload({ onUpload }: BillUploadProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">
-        Upload Receipt
-      </h2>
-
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700 text-sm">{error}</p>
-        </div>
-      )}
-
-      {!selectedFile ? (
-        <div className="space-y-4">
-          {/* Camera Button */}
-          {isCameraSupported && (
-            <button
-              onClick={() => setShowCamera(true)}
-              className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-            >
-              <span className="text-2xl">📸</span>
-              <span>Take Photo</span>
-            </button>
-          )}
-
-          {/* File Selection Button */}
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/heic"
-              onChange={handleFileSelect}
-              className="hidden"
-              id="file-upload"
-            />
-            <label
-              htmlFor="file-upload"
-              className="block w-full px-6 py-4 bg-white border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:border-gray-400 transition-colors cursor-pointer text-center"
-            >
-              <span className="text-2xl mr-2">📁</span>
-              <span>Choose from Gallery</span>
-            </label>
+    <Card className="max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-3">
+          <div className="inline-flex items-center justify-center w-10 h-10 bg-primary-100 rounded-xl">
+            <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
           </div>
+          Upload Receipt
+        </CardTitle>
+      </CardHeader>
 
-          <div className="text-center text-sm text-gray-500 mt-4">
-            <p>Supported formats: JPEG, PNG, HEIC</p>
-            <p>Maximum size: 5MB</p>
-            <p className="text-xs mt-1">Images will be automatically compressed</p>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Image Preview */}
-          <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
-            <img
-              src={previewUrl || ''}
-              alt="Receipt preview"
-              className="w-full h-auto"
-            />
-          </div>
-
-          {/* File Info */}
-          <div className="text-sm text-gray-600">
-            <p className="font-medium">{selectedFile.name}</p>
-            <p>{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
-          </div>
-
-          {/* Upload Progress */}
-          {isUploading && (
-            <div className="space-y-2">
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-              <p className="text-sm text-gray-600 text-center">
-                Uploading... {uploadProgress}%
-              </p>
+      <CardContent>
+        {error && (
+          <div className="mb-6 p-4 bg-error-50 border border-error-200 rounded-xl">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-error-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-error-700 text-sm">{error}</p>
             </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            <button
-              onClick={handleReset}
-              disabled={isUploading}
-              className="flex-1 px-6 py-3 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Change Photo
-            </button>
-            <button
-              onClick={handleUpload}
-              disabled={isUploading}
-              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isUploading ? 'Uploading...' : 'Upload & Process'}
-            </button>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {!selectedFile ? (
+          <div className="space-y-4">
+            {/* Upload Options */}
+            <div className="grid grid-cols-1 gap-4">
+              {isCameraSupported && (
+                <Button
+                  onClick={() => setShowCamera(true)}
+                  size="lg"
+                  fullWidth
+                  className="h-16"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Take Photo
+                </Button>
+              )}
+
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/heic"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <Button
+                  variant="outline"
+                  size="lg"
+                  fullWidth
+                  className="h-16"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Choose from Gallery
+                </Button>
+              </div>
+            </div>
+
+            {/* File Requirements */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h4 className="font-medium text-gray-900 mb-2">File Requirements</h4>
+              <ul className="text-sm text-gray-600 space-y-1">
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-success-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Formats: JPEG, PNG, HEIC
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-success-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Maximum size: 5MB
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-success-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Auto-compression included
+                </li>
+              </ul>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Image Preview */}
+            <div className="border-2 border-gray-200 rounded-xl overflow-hidden bg-gray-50">
+              <img
+                src={previewUrl || ''}
+                alt="Receipt preview"
+                className="w-full h-auto max-h-96 object-contain"
+              />
+            </div>
+
+            {/* File Info */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-gray-900">{selectedFile.name}</p>
+                  <p className="text-sm text-gray-600">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                </div>
+                <div className="flex items-center gap-2 text-success-600">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm font-medium">Ready</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Upload Progress */}
+            {isUploading && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Processing...</span>
+                  <span className="font-medium text-primary-600">{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-primary-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <Button
+                onClick={handleReset}
+                disabled={isUploading}
+                variant="secondary"
+                size="lg"
+                className="flex-1"
+              >
+                Change Photo
+              </Button>
+              <Button
+                onClick={handleUpload}
+                disabled={isUploading}
+                loading={isUploading}
+                size="lg"
+                className="flex-1"
+              >
+                {isUploading ? 'Processing...' : 'Upload & Process'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
